@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Divya Ledger — All Day Tours & Travels</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--ink:#1a1209;--paper:#faf7f0;--cream:#f0ead8;--gold:#c9933a;--gold-light:#e8c97a;--red:#b33030;--green:#2a6b3c;--rule:#d4c9a8;--shadow:rgba(26,18,9,0.12)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;background-image:repeating-linear-gradient(0deg,transparent,transparent 27px,var(--rule) 27px,var(--rule) 28px)}
+.header{background:var(--ink);color:var(--paper);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid var(--gold);position:sticky;top:0;z-index:100;box-shadow:0 4px 20px var(--shadow)}
+.header h1{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold-light)}
+.header span{font-family:'DM Mono',monospace;font-size:0.68rem;color:#a09070;letter-spacing:0.1em;text-transform:uppercase;display:block;margin-top:2px}
+.header-balance .label{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.12em;color:#a09070;font-family:'DM Mono',monospace;text-align:right}
+.header-balance .amount{font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:500;color:var(--gold-light)}
+.amount.dr{color:#e88080}.amount.cr{color:#80c890}
+.container{max-width:1100px;margin:0 auto;padding:22px 18px}
+.form-card{background:var(--paper);border:1.5px solid var(--rule);border-top:4px solid var(--gold);border-radius:2px;padding:22px 26px;margin-bottom:24px;box-shadow:4px 4px 0 var(--rule),0 8px 32px var(--shadow)}
+.form-card h2{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--gold);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--rule)}
+.type-tabs{display:flex;margin-bottom:16px;border:1.5px solid var(--rule);border-radius:2px;overflow:hidden;width:fit-content}
+.type-tab{padding:8px 20px;font-size:0.75rem;font-family:'DM Mono',monospace;font-weight:500;letter-spacing:0.08em;cursor:pointer;background:#fffef8;color:#7a6a4a;border:none;border-right:1px solid var(--rule);transition:all 0.15s;text-transform:uppercase}
+.type-tab:last-child{border-right:none}
+.type-tab.sales.active{background:#1a3a2a;color:#80d890}
+.type-tab.purchase.active{background:#2a1a3a;color:#c880d8}
+.type-tab.refund.active{background:#3a1a1a;color:#e88080}
+.type-tab.receipt.active{background:#1a2a3a;color:#80b8e8}
+.form-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.form-grid.four{grid-template-columns:1fr 1fr 1fr 1fr}
+.form-grid.full{grid-template-columns:1fr}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:#7a6a4a;font-family:'DM Mono',monospace;font-weight:500}
+.field input,.field select,.field textarea{border:1px solid var(--rule);background:#fffef8;padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:0.86rem;color:var(--ink);border-radius:1px;outline:none;transition:border-color 0.2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);background:#fff;box-shadow:0 0 0 3px rgba(201,147,58,0.1)}
+.field textarea{resize:vertical;min-height:50px}
+.btn-row{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+.btn{padding:9px 22px;font-family:'DM Mono',monospace;font-size:0.76rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border:none;border-radius:1px;transition:all 0.15s}
+.btn-primary{background:var(--ink);color:var(--gold-light);border:2px solid var(--ink)}
+.btn-primary:hover{background:#2d2010}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+.btn-secondary{background:transparent;color:var(--ink);border:2px solid var(--rule)}
+.btn-secondary:hover{border-color:var(--ink)}
+.btn-export{background:var(--gold);color:#fff;border:2px solid var(--gold);padding:9px 16px}
+.btn-export:hover{background:#a07820}
+.btn-excel{background:#1e6b2e;color:#fff;border:2px solid #1e6b2e;padding:9px 16px}
+.btn-excel:hover{background:#154d21}
+.btn-danger{background:transparent;color:var(--red);border:1px solid #e0b0b0;padding:4px 10px;font-size:0.63rem;cursor:pointer;border-radius:1px;font-family:'DM Mono',monospace;letter-spacing:0.06em;text-transform:uppercase}
+.btn-danger:hover{background:#ffeaea}
+.summary-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px}
+.summary-card{background:var(--paper);border:1.5px solid var(--rule);border-radius:2px;padding:13px 16px;box-shadow:3px 3px 0 var(--rule)}
+.s-label{font-family:'DM Mono',monospace;font-size:0.58rem;text-transform:uppercase;letter-spacing:0.12em;color:#7a6a4a;margin-bottom:4px}
+.s-val{font-family:'DM Mono',monospace;font-size:1.05rem;font-weight:500}
+.summary-card.debit .s-val{color:var(--red)}
+.summary-card.credit .s-val{color:var(--green)}
+.summary-card.balance .s-val{color:var(--gold)}
+.ledger-wrap{background:var(--paper);border:1.5px solid var(--rule);border-radius:2px;overflow:hidden;box-shadow:4px 4px 0 var(--rule),0 8px 32px var(--shadow)}
+.ledger-top{padding:13px 18px;background:var(--ink);display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--gold)}
+.ledger-top h2{font-family:'Playfair Display',serif;font-size:0.95rem;color:var(--gold-light)}
+.filter-bar{display:flex;gap:8px;align-items:center;padding:9px 13px;background:var(--cream);border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.filter-bar input,.filter-bar select{border:1px solid var(--rule);background:var(--paper);padding:6px 10px;font-family:'DM Sans',sans-serif;font-size:0.8rem;color:var(--ink);border-radius:1px;outline:none}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--gold)}
+.filter-label{font-family:'DM Mono',monospace;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.1em;color:#7a6a4a}
+table{width:100%;border-collapse:collapse;font-size:0.79rem}
+thead tr{background:var(--cream);border-bottom:2px solid var(--rule)}
+thead th{padding:9px 13px;text-align:left;font-family:'DM Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:#7a6a4a;font-weight:500;white-space:nowrap}
+thead th.num{text-align:right}
+tbody tr{border-bottom:1px solid var(--rule);transition:background 0.1s}
+tbody tr:hover{background:#fdf9ee}
+tbody td{padding:9px 13px;vertical-align:middle;line-height:1.4}
+tbody td.num{text-align:right;font-family:'DM Mono',monospace;font-size:0.8rem}
+tbody td.date-cell{font-family:'DM Mono',monospace;font-size:0.73rem;color:#7a6a4a;white-space:nowrap}
+.particulars-main{font-weight:500;font-size:0.8rem}
+.vch-badge{display:inline-block;padding:2px 7px;border-radius:1px;font-family:'DM Mono',monospace;font-size:0.58rem;font-weight:500;text-transform:uppercase;letter-spacing:0.08em}
+.vch-sales{background:#e8f5ec;color:#2a6b3c;border:1px solid #b0d8bc}
+.vch-purchase{background:#f0e8f8;color:#5a2a7a;border:1px solid #c8a8e0}
+.vch-refund{background:#fde8e8;color:#b33030;border:1px solid #e8b0b0}
+.vch-receipt{background:#e8f0fc;color:#1a4a8a;border:1px solid #a8c0e8}
+.debit-amt{color:var(--red);font-weight:500}
+.credit-amt{color:var(--green);font-weight:500}
+.balance-dr{color:var(--red)}
+.balance-cr{color:var(--green)}
+tfoot tr{background:var(--ink);color:var(--paper)}
+tfoot td{padding:11px 13px;font-family:'DM Mono',monospace;font-size:0.8rem;font-weight:500}
+tfoot td.num{text-align:right}
+.empty-state{text-align:center;padding:50px 20px;color:#a09070}
+.empty-state p{font-family:'Playfair Display',serif;font-size:1rem;margin-bottom:6px}
+.empty-state span{font-size:0.75rem;font-family:'DM Mono',monospace}
+.toast{position:fixed;bottom:22px;right:22px;background:var(--ink);color:var(--gold-light);padding:11px 18px;border-left:4px solid var(--gold);font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:0.06em;border-radius:2px;box-shadow:0 8px 32px rgba(0,0,0,0.3);transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:999;max-width:300px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{border-color:var(--red);color:#e88080}
+.toast.ok{border-color:#4a9a5a;color:#80d890}
+.loading-bar{height:3px;background:var(--gold);width:0;transition:width 0.3s;position:fixed;top:0;left:0;z-index:999}
+@media(max-width:700px){.form-grid,.form-grid.four{grid-template-columns:1fr 1fr}.summary-strip{grid-template-columns:1fr}.header{padding:12px 14px}}
+</style>
+</head>
+<body>
+<div class="loading-bar" id="loadingBar"></div>
+
+<div class="header">
+  <div>
+    <h1>Divya — Ledger Account</h1>
+    <span>All Day Tours and Travels Pvt. Ltd.</span>
+  </div>
+  <div class="header-balance">
+    <div class="label">Closing Balance</div>
+    <div class="amount" id="headerBalance">RS 0.00</div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="form-card">
+    <h2>✦ New Entry</h2>
+    <div class="type-tabs">
+      <button class="type-tab sales active" onclick="setType('SALES',this)">Sales</button>
+      <button class="type-tab purchase" onclick="setType('PURCHASE',this)">Purchase</button>
+      <button class="type-tab refund" onclick="setType('REFUND',this)">Refund</button>
+      <button class="type-tab receipt" onclick="setType('RECEIPT',this)">Receipt</button>
+    </div>
+    <div class="form-grid" id="mainFields">
+      <div class="field"><label>Passenger / Particulars</label><input type="text" id="fPassenger" placeholder="e.g. HIT BAHADUR TAMANG"></div>
+      <div class="field"><label>Date</label><input type="date" id="fDate"></div>
+      <div class="field"><label>Net Amount (RS)</label><input type="number" id="fAmount" placeholder="0"></div>
+      <div class="field" id="qtyField"><label>Qty / Pax</label><input type="number" id="fQty" value="1" min="1"></div>
+    </div>
+    <div class="form-grid four" id="ticketFields">
+      <div class="field"><label>Ticket / PNR No.</label><input type="text" id="fTktNo" placeholder="e.g. 2855528752202"></div>
+      <div class="field"><label>Route</label><input type="text" id="fRoute" placeholder="e.g. KTM-HKG"></div>
+      <div class="field"><label>Airline</label><input type="text" id="fAirline" placeholder="e.g. RA / CX / AI"></div>
+      <div class="field"><label>Flight Date</label><input type="date" id="fFltDate"></div>
+    </div>
+    <div class="form-grid full" id="remarksField" style="display:none">
+      <div class="field"><label>Remarks / Details</label><textarea id="fRemarks" placeholder="e.g. Received via Nicasia Bank online transfer"></textarea></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+      <button class="btn btn-primary" id="btnAdd" onclick="addEntry()">+ Add Entry</button>
+    </div>
+  </div>
+
+  <div class="summary-strip">
+    <div class="summary-card debit"><div class="s-label">Total Debit (DR)</div><div class="s-val" id="sumDebit">RS 0.00</div></div>
+    <div class="summary-card credit"><div class="s-label">Total Credit (CR)</div><div class="s-val" id="sumCredit">RS 0.00</div></div>
+    <div class="summary-card balance"><div class="s-label">Closing Balance</div><div class="s-val" id="sumBalance">RS 0.00</div></div>
+  </div>
+
+  <div class="ledger-wrap">
+    <div class="ledger-top">
+      <h2>Ledger Entries</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-excel" onclick="exportExcel()">↓ Excel</button>
+        <button class="btn btn-export" onclick="exportPDF()">↓ PDF</button>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <span class="filter-label">Filter:</span>
+      <input type="text" id="filterText" placeholder="Search..." oninput="renderTable()" style="width:180px">
+      <select id="filterType" onchange="renderTable()">
+        <option value="">All Types</option>
+        <option value="SALES">Sales</option>
+        <option value="PURCHASE">Purchase</option>
+        <option value="REFUND">Refund</option>
+        <option value="RECEIPT">Receipt</option>
+      </select>
+      <input type="date" id="filterFrom" onchange="renderTable()">
+      <span class="filter-label">to</span>
+      <input type="date" id="filterTo" onchange="renderTable()">
+      <button class="btn btn-secondary" style="padding:6px 12px;font-size:0.7rem" onclick="clearFilters()">Clear</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Particulars</th><th>Vch Type</th>
+          <th class="num">Debit (RS)</th><th class="num">Credit (RS)</th>
+          <th class="num">Balance</th><th></th>
+        </tr></thead>
+        <tbody id="ledgerBody"></tbody>
+        <tfoot id="ledgerFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// All data calls go through google.script.run (no CORS!)
+let entries = [];
+let currentType = 'SALES';
+let deleteId = null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('fDate').valueAsDate = new Date();
+  loadEntries();
+});
+
+function loadEntries() {
+  setLoading(true);
+  google.script.run
+    .withSuccessHandler(data => {
+      entries = data.entries || [];
+      renderTable();
+      setLoading(false);
+    })
+    .withFailureHandler(err => {
+      showToast('Load failed: ' + err.message, 'err');
+      setLoading(false);
+    })
+    .getAllEntries();
+}
+
+function addEntry() {
+  const passenger = document.getElementById('fPassenger').value.trim();
+  const date      = document.getElementById('fDate').value;
+  const amount    = parseFloat(document.getElementById('fAmount').value) || 0;
+  const qty       = parseInt(document.getElementById('fQty').value) || 1;
+  const tktNo     = document.getElementById('fTktNo').value.trim();
+  const route     = document.getElementById('fRoute').value.trim();
+  const airline   = document.getElementById('fAirline').value.trim();
+  const fltDate   = document.getElementById('fFltDate').value;
+  const remarks   = document.getElementById('fRemarks').value.trim();
+
+  if (!passenger) { showToast('Enter passenger / particulars', 'err'); return; }
+  if (!date)      { showToast('Select a date', 'err'); return; }
+  if (amount <= 0){ showToast('Enter a valid amount', 'err'); return; }
+
+  const netAmt = amount * (currentType === 'RECEIPT' || currentType === 'REFUND' ? 1 : qty);
+  let parts = passenger.toUpperCase();
+  if (route)   parts += ' ' + route;
+  if (tktNo)   parts += ' TKT NO. ' + tktNo;
+  if (airline) parts += ' ' + airline;
+  if (fltDate) parts += ' FLT DT ' + fmtDateDisplay(fltDate);
+  if (qty > 1 && currentType !== 'RECEIPT') parts += ' X ' + qty;
+  parts += ' NET AMT RS ' + netAmt.toLocaleString();
+  if (remarks) parts += '. ' + remarks;
+
+  const entry = {
+    id: Date.now(), date, particulars: parts,
+    passengerName: passenger.toUpperCase(),
+    vchType: currentType, amount: netAmt,
+    tktNo, route, airline, fltDate, qty, remarks
+  };
+
+  const btn = document.getElementById('btnAdd');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  setLoading(true);
+
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res.success) {
+        entries.push(entry);
+        renderTable();
+        clearForm();
+        showToast('Saved to Google Sheets ✓', 'ok');
+      } else {
+        showToast('Error: ' + (res.error || 'Unknown'), 'err');
+      }
+      btn.disabled = false; btn.textContent = '+ Add Entry';
+      setLoading(false);
+    })
+    .withFailureHandler(err => {
+      showToast('Save failed: ' + err.message, 'err');
+      btn.disabled = false; btn.textContent = '+ Add Entry';
+      setLoading(false);
+    })
+    .addEntry(entry);
+}
+
+function deleteEntry(id) {
+  if (!confirm('Delete this entry?')) return;
+  setLoading(true);
+  google.script.run
+    .withSuccessHandler(() => {
+      entries = entries.filter(e => e.id !== id);
+      renderTable();
+      showToast('Entry deleted', '');
+      setLoading(false);
+    })
+    .withFailureHandler(err => {
+      showToast('Delete failed: ' + err.message, 'err');
+      setLoading(false);
+    })
+    .deleteEntry(id);
+}
+
+function renderTable() {
+  const filterText = document.getElementById('filterText').value.toLowerCase();
+  const filterType = document.getElementById('filterType').value;
+  const filterFrom = document.getElementById('filterFrom').value;
+  const filterTo   = document.getElementById('filterTo').value;
+
+  const sorted = [...entries].sort((a,b) => (a.date||'').localeCompare(b.date||'') || a.id - b.id);
+  let running = 0, totalDr = 0, totalCr = 0;
+  const withBal = sorted.map(e => {
+    const isDr = e.vchType !== 'RECEIPT' && e.vchType !== 'REFUND';
+    if (isDr) { running += e.amount; totalDr += e.amount; }
+    else       { running -= e.amount; totalCr += e.amount; }
+    return { ...e, balance: running };
+  });
+
+  const filtered = withBal.filter(e => {
+    if (filterType && e.vchType !== filterType) return false;
+    if (filterFrom && e.date < filterFrom) return false;
+    if (filterTo   && e.date > filterTo)   return false;
+    if (filterText && !e.particulars.toLowerCase().includes(filterText)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('ledgerBody');
+  const tfoot = document.getElementById('ledgerFoot');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No entries yet</p><span>Add your first entry above</span></div></td></tr>';
+    tfoot.innerHTML = '';
+    updateSummary(totalDr, totalCr, running);
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(e => {
+    const isDr = e.vchType !== 'RECEIPT' && e.vchType !== 'REFUND';
+    const balSign = e.balance > 0 ? 'Dr' : e.balance < 0 ? 'Cr' : '';
+    const balClass = e.balance > 0 ? 'balance-dr' : 'balance-cr';
+    const badge = {SALES:'vch-sales',PURCHASE:'vch-purchase',REFUND:'vch-refund',RECEIPT:'vch-receipt'}[e.vchType]||'';
+    return '<tr>' +
+      '<td class="date-cell">' + fmtDateDisplay(e.date) + '</td>' +
+      '<td><div class="particulars-main">' + e.particulars + '</div></td>' +
+      '<td><span class="vch-badge ' + badge + '">' + e.vchType + '</span></td>' +
+      '<td class="num">' + (isDr ? '<span class="debit-amt">'+fmt(e.amount)+'</span>' : '—') + '</td>' +
+      '<td class="num">' + (!isDr ? '<span class="credit-amt">'+fmt(e.amount)+'</span>' : '—') + '</td>' +
+      '<td class="num ' + balClass + '">' + fmt(Math.abs(e.balance)) + ' ' + balSign + '</td>' +
+      '<td><button class="btn-danger" onclick="deleteEntry(' + e.id + ')">Del</button></td>' +
+      '</tr>';
+  }).join('');
+
+  const closingSign = running > 0 ? 'Dr' : running < 0 ? 'Cr' : '';
+  tfoot.innerHTML = '<tr>' +
+    '<td colspan="3" style="font-family:\'DM Mono\',monospace;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold-light)">Closing Balance</td>' +
+    '<td class="num" style="color:#e88080">' + fmt(totalDr) + '</td>' +
+    '<td class="num" style="color:#80c890">' + fmt(totalCr) + '</td>' +
+    '<td class="num" style="color:var(--gold-light)">' + fmt(Math.abs(running)) + ' ' + closingSign + '</td>' +
+    '<td></td></tr>';
+
+  updateSummary(totalDr, totalCr, running);
+}
+
+function updateSummary(dr, cr, bal) {
+  document.getElementById('sumDebit').textContent   = 'RS ' + fmt(dr);
+  document.getElementById('sumCredit').textContent  = 'RS ' + fmt(cr);
+  document.getElementById('sumBalance').textContent = 'RS ' + fmt(Math.abs(bal)) + (bal > 0 ? ' Dr' : bal < 0 ? ' Cr' : '');
+  const hb = document.getElementById('headerBalance');
+  hb.textContent = 'RS ' + fmt(Math.abs(bal)) + (bal > 0 ? ' Dr' : bal < 0 ? ' Cr' : '');
+  hb.className = 'amount ' + (bal > 0 ? 'dr' : bal < 0 ? 'cr' : '');
+}
+
+function setType(t, btn) {
+  currentType = t;
+  document.querySelectorAll('.type-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const isReceipt = t === 'RECEIPT';
+  document.getElementById('ticketFields').style.display = isReceipt ? 'none' : '';
+  document.getElementById('remarksField').style.display = isReceipt ? '' : 'none';
+  document.getElementById('qtyField').style.display = (isReceipt || t === 'REFUND') ? 'none' : '';
+  document.getElementById('fPassenger').placeholder =
+    t === 'RECEIPT' ? 'e.g. RECEIVED ONLINE / NICASIA BANK' :
+    t === 'REFUND'  ? 'e.g. TKT REFUND — PASSENGER NAME' : 'e.g. HIT BAHADUR TAMANG';
+}
+
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+  doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.text('All Day Tours and Travels Pvt. Ltd. (2082/83)', 148, 14, { align:'center' });
+  doc.setFontSize(11); doc.text('DIVYA — Ledger Account', 148, 21, { align:'center' });
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text('Generated: ' + new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}), 148, 27, { align:'center' });
+  const sorted = [...entries].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.id-b.id);
+  let running=0, totalDr=0, totalCr=0;
+  const rows = sorted.map(e=>{
+    const isDr = e.vchType!=='RECEIPT'&&e.vchType!=='REFUND';
+    if(isDr){running+=e.amount;totalDr+=e.amount;}else{running-=e.amount;totalCr+=e.amount;}
+    return [fmtDateDisplay(e.date),e.particulars,e.vchType,isDr?fmt(e.amount):'',!isDr?fmt(e.amount):'',fmt(Math.abs(running))+(running>0?' Dr':running<0?' Cr':'')];
+  });
+  doc.autoTable({
+    head:[['Date','Particulars','Vch Type','Debit (RS)','Credit (RS)','Balance']],
+    body:rows,
+    foot:[['','Closing Balance','',fmt(totalDr),fmt(totalCr),fmt(Math.abs(running))+(running>0?' Dr':' Cr')]],
+    startY:31,
+    styles:{font:'helvetica',fontSize:7.5,cellPadding:3,overflow:'linebreak'},
+    headStyles:{fillColor:[26,18,9],textColor:[201,147,58],fontStyle:'bold',fontSize:7},
+    footStyles:{fillColor:[26,18,9],textColor:[201,200,160],fontStyle:'bold'},
+    columnStyles:{0:{cellWidth:22},1:{cellWidth:100},2:{cellWidth:20},3:{cellWidth:28,halign:'right'},4:{cellWidth:28,halign:'right'},5:{cellWidth:30,halign:'right'}},
+    alternateRowStyles:{fillColor:[250,247,240]},margin:{left:10,right:10}
+  });
+  doc.save('Divya_Ledger_'+new Date().toISOString().slice(0,10)+'.pdf');
+}
+
+function exportExcel() {
+  const sorted = [...entries].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.id-b.id);
+  let running=0,totalDr=0,totalCr=0;
+  const wsData=[['All Day Tours and Travels Pvt. Ltd. (2082/83)'],['DIVYA — Ledger Account'],['Generated: '+new Date().toLocaleDateString('en-GB')],[],['Date','Particulars','Vch Type','Debit (RS)','Credit (RS)','Balance']];
+  sorted.forEach(e=>{
+    const isDr=e.vchType!=='RECEIPT'&&e.vchType!=='REFUND';
+    if(isDr){running+=e.amount;totalDr+=e.amount;}else{running-=e.amount;totalCr+=e.amount;}
+    wsData.push([fmtDateDisplay(e.date),e.particulars,e.vchType,isDr?e.amount:'',!isDr?e.amount:'',Math.abs(running).toFixed(2)+(running>0?' Dr':running<0?' Cr':'')]);
+  });
+  wsData.push([],['','CLOSING BALANCE','',totalDr,totalCr,Math.abs(running).toFixed(2)+(running>0?' Dr':' Cr')]);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']=[{wch:14},{wch:60},{wch:12},{wch:14},{wch:14},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'DIVYA Ledger');
+  XLSX.writeFile(wb,'Divya_Ledger_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function fmt(n){ return Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDateDisplay(d){
+  if(!d) return '';
+  try {
+    let y,m,day;
+    if(typeof d==='string'&&d.length===10&&d.includes('-')){[y,m,day]=d.split('-');}
+    else{const dt=new Date(d);y=dt.getFullYear();m=String(dt.getMonth()+1).padStart(2,'0');day=String(dt.getDate()).padStart(2,'0');}
+    const months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    return parseInt(day)+'-'+months[parseInt(m)-1]+'-'+String(y).slice(2);
+  }catch(e){return String(d);}
+}
+function clearForm(){
+  ['fPassenger','fTktNo','fRoute','fAirline','fRemarks'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fAmount').value='';
+  document.getElementById('fQty').value=1;
+  document.getElementById('fFltDate').value='';
+  document.getElementById('fDate').valueAsDate=new Date();
+}
+function clearFilters(){
+  ['filterText','filterFrom','filterTo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('filterType').value='';
+  renderTable();
+}
+function setLoading(on){ document.getElementById('loadingBar').style.width = on ? '70%' : '100%'; if(!on) setTimeout(()=>document.getElementById('loadingBar').style.width='0',400); }
+let toastTimer;
+function showToast(msg,type){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast '+(type||''); setTimeout(()=>t.classList.add('show'),10); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3500); }
+</script>
+</body>
+</html>
+
